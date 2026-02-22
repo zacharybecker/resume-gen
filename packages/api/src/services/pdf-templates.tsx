@@ -6,8 +6,8 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-import type { ResumeData, TemplateId, ThemeConfig } from "@resume-gen/shared";
-import { getColorPalette, getFontSet, deriveThemeConfig } from "@resume-gen/shared";
+import type { ResumeData, ThemeConfig } from "@resume-gen/shared";
+import { getColorPalette, getFontSet } from "@resume-gen/shared";
 
 interface TemplateTheme {
   fontFamily: string;
@@ -351,10 +351,3 @@ export function createPdfDocumentFromTheme(
   return renderDocument(data, styles);
 }
 
-export function createPdfDocument(
-  data: ResumeData,
-  templateId: TemplateId
-): React.ReactElement {
-  const themeConfig = deriveThemeConfig(templateId);
-  return createPdfDocumentFromTheme(data, themeConfig);
-}

@@ -10,10 +10,10 @@ import {
   BorderStyle,
   ShadingType,
 } from "docx";
-import type { ResumeData, TemplateId } from "@resume-gen/shared";
+import type { ResumeData } from "@resume-gen/shared";
 import type { ThemeConfig } from "@resume-gen/shared";
-import { getColorPalette, getFontSet, deriveThemeConfig } from "@resume-gen/shared";
-import { createPdfDocument, createPdfDocumentFromTheme } from "./pdf-templates.js";
+import { getColorPalette, getFontSet } from "@resume-gen/shared";
+import { createPdfDocumentFromTheme } from "./pdf-templates.js";
 
 interface DocxTheme {
   font: string;
@@ -90,15 +90,6 @@ function resolveDocxTheme(themeConfig: ThemeConfig): DocxTheme {
 
 // ── PDF generation ──────────────────────────────────────────────────
 
-export async function generatePdfBuffer(
-  data: ResumeData,
-  templateId: TemplateId
-): Promise<Buffer> {
-  const doc = createPdfDocument(data, templateId);
-  const buffer = await renderToBuffer(doc as any);
-  return Buffer.from(buffer);
-}
-
 export async function generatePdfBufferFromTheme(
   data: ResumeData,
   themeConfig: ThemeConfig
@@ -109,14 +100,6 @@ export async function generatePdfBufferFromTheme(
 }
 
 // ── DOCX generation ─────────────────────────────────────────────────
-
-export async function generateDocxBuffer(
-  data: ResumeData,
-  templateId: TemplateId
-): Promise<Buffer> {
-  const themeConfig = deriveThemeConfig(templateId);
-  return generateDocxBufferFromTheme(data, themeConfig);
-}
 
 export async function generateDocxBufferFromTheme(
   data: ResumeData,
@@ -148,13 +131,10 @@ export async function generateDocxBufferFromTheme(
   );
 
   // Contact info
-  const contactParts: string[] = [];
-  if (data.contactInfo.email) contactParts.push(data.contactInfo.email);
-  if (data.contactInfo.phone) contactParts.push(data.contactInfo.phone);
-  if (data.contactInfo.location) contactParts.push(data.contactInfo.location);
-  if (data.contactInfo.linkedin) contactParts.push(data.contactInfo.linkedin);
-  if (data.contactInfo.website) contactParts.push(data.contactInfo.website);
-  if (data.contactInfo.github) contactParts.push(data.contactInfo.github);
+  const contactParts = [
+    data.contactInfo.email, data.contactInfo.phone, data.contactInfo.location,
+    data.contactInfo.linkedin, data.contactInfo.website, data.contactInfo.github,
+  ].filter(Boolean) as string[];
 
   if (contactParts.length > 0) {
     sections.push(

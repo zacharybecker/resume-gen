@@ -10,10 +10,6 @@ export interface ChatMessage {
   createdAt: Date;
 }
 
-export interface SendMessageRequest {
-  message: string;
-}
-
 export interface ChatStreamEvent {
   type: "text" | "resume_update" | "done" | "error";
   content?: string;

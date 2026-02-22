@@ -7,6 +7,7 @@ import { DEFAULT_THEME } from "@resume-gen/shared";
 import { apiPost } from "../lib/api";
 
 type Step = "input" | "template" | "generating";
+const STEPS: Step[] = ["input", "template", "generating"];
 
 export default function CreateResume() {
   const navigate = useNavigate();
@@ -62,14 +63,11 @@ export default function CreateResume() {
 
         {/* Progress bar */}
         <div className="mt-4 flex gap-2">
-          {["input", "template", "generating"].map((s, i) => (
+          {STEPS.map((s, i) => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full ${
-                i <=
-                ["input", "template", "generating"].indexOf(step)
-                  ? "bg-coral"
-                  : "bg-gray-200"
+                i <= STEPS.indexOf(step) ? "bg-coral" : "bg-gray-200"
               }`}
             />
           ))}

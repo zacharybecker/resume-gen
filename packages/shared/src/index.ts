@@ -1,4 +1,4 @@
-export type { User, UserCredits } from "./types/user.js";
+export type { User } from "./types/user.js";
 export type {
   ContactInfo,
   Experience,
@@ -15,13 +15,10 @@ export type {
 export type {
   MessageRole,
   ChatMessage,
-  SendMessageRequest,
   ChatStreamEvent,
 } from "./types/chat.js";
 export type {
   CreditPack,
-  Purchase,
-  CheckoutRequest,
   CheckoutResponse,
 } from "./types/payment.js";
 export { TEMPLATES } from "./constants/templates.js";

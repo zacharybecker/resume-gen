@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../hooks/useAuth";
+import { downloadResume } from "../lib/api";
 import ResumePreview from "../components/resume/ResumePreview";
 import ChatPanel from "../components/chat/ChatPanel";
 import type { ResumeData, TemplateId, ThemeConfig } from "@resume-gen/shared";
@@ -19,29 +20,16 @@ export default function Editor() {
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const handleDownload = useCallback(async (format: "pdf" | "docx") => {
-    if (!user || !id) return;
+    if (!id) return;
     setDownloading(format);
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(`/api/resumes/${id}/download/${format}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title || "resume"}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await downloadResume(id, format, title || "resume");
     } catch (err) {
       console.error("Download error:", err);
     } finally {
       setDownloading(null);
     }
-  }, [user, id, title]);
+  }, [id, title]);
 
   useEffect(() => {
     if (!user || !id) return;

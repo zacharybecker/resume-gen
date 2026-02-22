@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { adminDb } from "../config/firebase.js";
 import { authMiddleware, getUid } from "../middleware/auth.js";
-import { generatePdfBuffer, generateDocxBuffer, generatePdfBufferFromTheme, generateDocxBufferFromTheme } from "../services/document.js";
+import { generatePdfBufferFromTheme, generateDocxBufferFromTheme } from "../services/document.js";
 import type { ResumeData, TemplateId, ThemeConfig } from "@resume-gen/shared";
 import { deriveThemeConfig } from "@resume-gen/shared";
 

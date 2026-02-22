@@ -6,3 +6,6 @@ dist/
 *.log
 .turbo/
 .vite/
+
+.claude/
+docs/plans/

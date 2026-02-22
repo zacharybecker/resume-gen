@@ -1,12 +1,10 @@
 import { Link } from "react-router-dom";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useResumes } from "../hooks/useResumes";
-import { useAuth } from "../hooks/useAuth";
-import { apiDelete } from "../lib/api";
+import { apiDelete, downloadResume } from "../lib/api";
 import type { Resume } from "@resume-gen/shared";
 
 function ResumeCard({ resume }: { resume: Resume }) {
-  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
@@ -37,29 +35,16 @@ function ResumeCard({ resume }: { resume: Resume }) {
 
   const handleDownload = useCallback(async (e: React.MouseEvent, format: "pdf" | "docx") => {
     e.preventDefault();
-    if (!user || !resume.id) return;
+    if (!resume.id) return;
     setDownloading(format);
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(`/api/resumes/${resume.id}/download/${format}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${resume.title || "resume"}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await downloadResume(resume.id, format, resume.title || "resume");
     } catch (err) {
       console.error("Download error:", err);
     } finally {
       setDownloading(null);
     }
-  }, [user, resume.id, resume.title]);
+  }, [resume.id, resume.title]);
 
   const statusColors = {
     draft: "bg-gray-100 text-gray-600",
@@ -76,8 +61,8 @@ function ResumeCard({ resume }: { resume: Resume }) {
               {resume.title}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {(resume as any).themeConfig
-                ? `${(resume as any).themeConfig.layout} layout · ${(resume as any).themeConfig.colorScheme} scheme`
+              {resume.themeConfig
+                ? `${resume.themeConfig.layout} layout · ${resume.themeConfig.colorScheme} scheme`
                 : `${resume.templateId} template`}
             </p>
           </div>
@@ -98,7 +83,7 @@ function ResumeCard({ resume }: { resume: Resume }) {
 
       {/* Action bar */}
       <div className="flex items-center justify-between border-t border-gray-100 px-5 py-2.5">
-        {resume.status === "complete" ? (
+        {resume.status === "complete" && (
           <div className="flex items-center gap-2">
             <button
               onClick={(e) => handleDownload(e, "pdf")}
@@ -121,8 +106,6 @@ function ResumeCard({ resume }: { resume: Resume }) {
               {downloading === "docx" ? "..." : "DOCX"}
             </button>
           </div>
-        ) : (
-          <div />
         )}
 
         {/* Menu button */}
