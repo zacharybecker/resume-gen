@@ -2,6 +2,11 @@ import { Router, type Request, type Response } from "express";
 import { adminDb } from "../config/firebase.js";
 import { authMiddleware, getUid } from "../middleware/auth.js";
 import { FieldValue } from "firebase-admin/firestore";
+import {
+  sanitizeAndValidateInputSources,
+  sanitizeAndValidateJobPosting,
+  validateResumeTitle,
+} from "../services/input-guard.js";
 
 export const resumesRouter: Router = Router();
 
@@ -51,6 +56,37 @@ resumesRouter.post("/", async (req: Request, res: Response) => {
   const uid = getUid(req);
   const { title, templateId, themeConfig, mode, jobPosting, inputSources } = req.body;
 
+  // Validate title
+  if (title) {
+    const titleResult = validateResumeTitle(title);
+    if (!titleResult.valid) {
+      res.status(400).json({ message: titleResult.error });
+      return;
+    }
+  }
+
+  // Validate and sanitize input sources
+  let sanitizedInputSources = inputSources || [];
+  if (inputSources?.length) {
+    const { sanitized, validation } = sanitizeAndValidateInputSources(inputSources);
+    if (!validation.valid) {
+      res.status(400).json({ message: validation.error });
+      return;
+    }
+    sanitizedInputSources = sanitized;
+  }
+
+  // Validate and sanitize job posting
+  let sanitizedJobPosting = jobPosting || null;
+  if (jobPosting) {
+    const { sanitized, validation } = sanitizeAndValidateJobPosting(jobPosting);
+    if (!validation.valid) {
+      res.status(400).json({ message: validation.error });
+      return;
+    }
+    sanitizedJobPosting = sanitized;
+  }
+
   try {
     const docRef = await adminDb
       .collection("users")
@@ -62,8 +98,8 @@ resumesRouter.post("/", async (req: Request, res: Response) => {
         templateId: templateId || "modern",
         themeConfig: themeConfig || null,
         mode: mode || "create",
-        jobPosting: jobPosting || null,
-        inputSources: inputSources || [],
+        jobPosting: sanitizedJobPosting,
+        inputSources: sanitizedInputSources,
         resumeData: null,
         resumeHtml: null,
         status: "draft",
