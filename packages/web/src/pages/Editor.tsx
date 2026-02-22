@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -14,6 +14,32 @@ export default function Editor() {
   const [templateId, setTemplateId] = useState<TemplateId>("modern");
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const handleDownload = useCallback(async (format: "pdf" | "docx") => {
+    if (!user || !id) return;
+    setDownloading(format);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/resumes/${id}/download/${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title || "resume"}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+    } finally {
+      setDownloading(null);
+    }
+  }, [user, id, title]);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -59,24 +85,26 @@ export default function Editor() {
           <h1 className="text-lg font-semibold text-dark">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href={`/api/resumes/${id}/download/pdf`}
-            className="flex items-center gap-1.5 rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-coral-dark"
+          <button
+            onClick={() => handleDownload("pdf")}
+            disabled={downloading !== null}
+            className="flex items-center gap-1.5 rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            PDF
-          </a>
-          <a
-            href={`/api/resumes/${id}/download/docx`}
-            className="flex items-center gap-1.5 rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-coral-dark"
+            {downloading === "pdf" ? "..." : "PDF"}
+          </button>
+          <button
+            onClick={() => handleDownload("docx")}
+            disabled={downloading !== null}
+            className="flex items-center gap-1.5 rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            DOCX
-          </a>
+            {downloading === "docx" ? "..." : "DOCX"}
+          </button>
         </div>
       </div>
 

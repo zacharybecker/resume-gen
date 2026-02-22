@@ -8,6 +8,7 @@ import {
   HeadingLevel,
   AlignmentType,
   BorderStyle,
+  ShadingType,
 } from "docx";
 import type { ResumeData, TemplateId } from "@resume-gen/shared";
 import { createPdfDocument } from "./pdf-templates.js";
@@ -21,13 +22,108 @@ export async function generatePdfBuffer(
   return Buffer.from(buffer);
 }
 
+// Color palette matching the frontend Tailwind theme
+const colors = {
+  coral: "FF6B6B",
+  dark: "1A1A1A",
+  gray100: "F3F4F6",
+  gray200: "E5E7EB",
+  gray400: "9CA3AF",
+  gray500: "6B7280",
+  gray600: "4B5563",
+  gray700: "374151",
+  gray900: "111827",
+  green400: "4ADE80",
+  green600: "16A34A",
+  white: "FFFFFF",
+};
+
+interface DocxTheme {
+  font: string;
+  headerBg: string | null; // null = no shading (white)
+  headerText: string;
+  headerSubText: string;
+  accent: string;
+  bodyText: string;
+  subText: string;
+  sectionBorder: string;
+}
+
+const docxThemes: Record<TemplateId, DocxTheme> = {
+  modern: {
+    font: "Calibri",
+    headerBg: null,
+    headerText: colors.dark,
+    headerSubText: colors.gray500,
+    accent: colors.coral,
+    bodyText: colors.dark,
+    subText: colors.gray600,
+    sectionBorder: colors.gray200,
+  },
+  classic: {
+    font: "Times New Roman",
+    headerBg: null,
+    headerText: colors.dark,
+    headerSubText: colors.gray500,
+    accent: colors.gray700,
+    bodyText: colors.dark,
+    subText: colors.gray600,
+    sectionBorder: colors.gray200,
+  },
+  minimal: {
+    font: "Calibri",
+    headerBg: null,
+    headerText: colors.dark,
+    headerSubText: colors.gray500,
+    accent: colors.gray500,
+    bodyText: colors.dark,
+    subText: colors.gray600,
+    sectionBorder: colors.gray200,
+  },
+  creative: {
+    font: "Calibri",
+    headerBg: colors.coral,
+    headerText: colors.white,
+    headerSubText: colors.white,
+    accent: colors.coral,
+    bodyText: colors.dark,
+    subText: colors.gray600,
+    sectionBorder: colors.gray200,
+  },
+  executive: {
+    font: "Times New Roman",
+    headerBg: colors.dark,
+    headerText: colors.white,
+    headerSubText: colors.white,
+    accent: colors.dark,
+    bodyText: colors.dark,
+    subText: colors.gray600,
+    sectionBorder: colors.gray200,
+  },
+  technical: {
+    font: "Courier New",
+    headerBg: colors.gray900,
+    headerText: colors.green400,
+    headerSubText: colors.green400,
+    accent: colors.green600,
+    bodyText: colors.dark,
+    subText: colors.gray600,
+    sectionBorder: colors.gray200,
+  },
+};
+
 export async function generateDocxBuffer(
   data: ResumeData,
-  _templateId: TemplateId
+  templateId: TemplateId
 ): Promise<Buffer> {
+  const theme = docxThemes[templateId] || docxThemes.modern;
   const sections: Paragraph[] = [];
 
   // Name
+  const nameShading = theme.headerBg
+    ? { type: ShadingType.SOLID, color: theme.headerBg, fill: theme.headerBg }
+    : undefined;
+
   sections.push(
     new Paragraph({
       children: [
@@ -35,11 +131,13 @@ export async function generateDocxBuffer(
           text: data.contactInfo.fullName,
           bold: true,
           size: 28,
-          font: "Calibri",
+          font: theme.font,
+          color: theme.headerText,
         }),
       ],
       alignment: AlignmentType.CENTER,
       spacing: { after: 100 },
+      shading: nameShading,
     })
   );
 
@@ -49,6 +147,8 @@ export async function generateDocxBuffer(
   if (data.contactInfo.phone) contactParts.push(data.contactInfo.phone);
   if (data.contactInfo.location) contactParts.push(data.contactInfo.location);
   if (data.contactInfo.linkedin) contactParts.push(data.contactInfo.linkedin);
+  if (data.contactInfo.website) contactParts.push(data.contactInfo.website);
+  if (data.contactInfo.github) contactParts.push(data.contactInfo.github);
 
   if (contactParts.length > 0) {
     sections.push(
@@ -57,23 +157,24 @@ export async function generateDocxBuffer(
           new TextRun({
             text: contactParts.join(" | "),
             size: 18,
-            font: "Calibri",
-            color: "666666",
+            font: theme.font,
+            color: theme.headerSubText,
           }),
         ],
         alignment: AlignmentType.CENTER,
         spacing: { after: 200 },
+        shading: nameShading,
       })
     );
   }
 
   // Summary
   if (data.summary) {
-    sections.push(createSectionHeader("PROFESSIONAL SUMMARY"));
+    sections.push(createSectionHeader("PROFESSIONAL SUMMARY", theme));
     sections.push(
       new Paragraph({
         children: [
-          new TextRun({ text: data.summary, size: 20, font: "Calibri" }),
+          new TextRun({ text: data.summary, size: 20, font: theme.font, color: theme.subText }),
         ],
         spacing: { after: 200 },
       })
@@ -82,47 +183,46 @@ export async function generateDocxBuffer(
 
   // Experience
   if (data.experience.length > 0) {
-    sections.push(createSectionHeader("EXPERIENCE"));
+    sections.push(createSectionHeader("EXPERIENCE", theme));
     for (const exp of data.experience) {
       sections.push(
         new Paragraph({
           children: [
             new TextRun({
-              text: `${exp.title} at ${exp.company}`,
+              text: exp.title,
               bold: true,
               size: 22,
-              font: "Calibri",
+              font: theme.font,
+              color: theme.bodyText,
             }),
             new TextRun({
               text: `  ${exp.startDate} - ${exp.current ? "Present" : exp.endDate || ""}`,
               size: 18,
-              font: "Calibri",
-              color: "999999",
+              font: theme.font,
+              color: colors.gray400,
             }),
           ],
           spacing: { before: 100 },
         })
       );
-      if (exp.location) {
-        sections.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: exp.location,
-                italics: true,
-                size: 18,
-                font: "Calibri",
-                color: "666666",
-              }),
-            ],
-          })
-        );
-      }
+      sections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${exp.company}${exp.location ? ` - ${exp.location}` : ""}`,
+              size: 20,
+              font: theme.font,
+              color: theme.subText,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
       for (const highlight of exp.highlights) {
         sections.push(
           new Paragraph({
             children: [
-              new TextRun({ text: `• ${highlight}`, size: 20, font: "Calibri" }),
+              new TextRun({ text: `• ${highlight}`, size: 20, font: theme.font, color: theme.bodyText }),
             ],
             indent: { left: 360 },
             spacing: { before: 40 },
@@ -134,7 +234,7 @@ export async function generateDocxBuffer(
 
   // Education
   if (data.education.length > 0) {
-    sections.push(createSectionHeader("EDUCATION"));
+    sections.push(createSectionHeader("EDUCATION", theme));
     for (const edu of data.education) {
       sections.push(
         new Paragraph({
@@ -143,7 +243,8 @@ export async function generateDocxBuffer(
               text: `${edu.degree} in ${edu.field}`,
               bold: true,
               size: 22,
-              font: "Calibri",
+              font: theme.font,
+              color: theme.bodyText,
             }),
           ],
           spacing: { before: 100 },
@@ -155,15 +256,26 @@ export async function generateDocxBuffer(
             new TextRun({
               text: edu.institution,
               size: 20,
-              font: "Calibri",
+              font: theme.font,
+              color: theme.subText,
             }),
             ...(edu.endDate
               ? [
                   new TextRun({
                     text: ` | ${edu.endDate}`,
                     size: 18,
-                    font: "Calibri",
-                    color: "999999",
+                    font: theme.font,
+                    color: colors.gray400,
+                  }),
+                ]
+              : []),
+            ...(edu.gpa
+              ? [
+                  new TextRun({
+                    text: ` | GPA: ${edu.gpa}`,
+                    size: 18,
+                    font: theme.font,
+                    color: colors.gray400,
                   }),
                 ]
               : []),
@@ -175,14 +287,15 @@ export async function generateDocxBuffer(
 
   // Skills
   if (data.skills.length > 0) {
-    sections.push(createSectionHeader("SKILLS"));
+    sections.push(createSectionHeader("SKILLS", theme));
     sections.push(
       new Paragraph({
         children: [
           new TextRun({
             text: data.skills.join(", "),
             size: 20,
-            font: "Calibri",
+            font: theme.font,
+            color: theme.bodyText,
           }),
         ],
         spacing: { after: 200 },
@@ -192,7 +305,7 @@ export async function generateDocxBuffer(
 
   // Projects
   if (data.projects.length > 0) {
-    sections.push(createSectionHeader("PROJECTS"));
+    sections.push(createSectionHeader("PROJECTS", theme));
     for (const proj of data.projects) {
       sections.push(
         new Paragraph({
@@ -201,7 +314,8 @@ export async function generateDocxBuffer(
               text: proj.name,
               bold: true,
               size: 22,
-              font: "Calibri",
+              font: theme.font,
+              color: theme.bodyText,
             }),
           ],
           spacing: { before: 100 },
@@ -213,7 +327,8 @@ export async function generateDocxBuffer(
             new TextRun({
               text: proj.description,
               size: 20,
-              font: "Calibri",
+              font: theme.font,
+              color: theme.subText,
             }),
           ],
         })
@@ -226,8 +341,8 @@ export async function generateDocxBuffer(
                 text: `Technologies: ${proj.technologies.join(", ")}`,
                 italics: true,
                 size: 18,
-                font: "Calibri",
-                color: "666666",
+                font: theme.font,
+                color: colors.gray500,
               }),
             ],
           })
@@ -238,7 +353,7 @@ export async function generateDocxBuffer(
 
   // Certifications
   if (data.certifications.length > 0) {
-    sections.push(createSectionHeader("CERTIFICATIONS"));
+    sections.push(createSectionHeader("CERTIFICATIONS", theme));
     for (const cert of data.certifications) {
       sections.push(
         new Paragraph({
@@ -246,15 +361,16 @@ export async function generateDocxBuffer(
             new TextRun({
               text: `${cert.name} - ${cert.issuer}`,
               size: 20,
-              font: "Calibri",
+              font: theme.font,
+              color: theme.bodyText,
             }),
             ...(cert.date
               ? [
                   new TextRun({
                     text: ` (${cert.date})`,
                     size: 18,
-                    font: "Calibri",
-                    color: "999999",
+                    font: theme.font,
+                    color: colors.gray400,
                   }),
                 ]
               : []),
@@ -287,22 +403,22 @@ export async function generateDocxBuffer(
   return Buffer.from(buffer);
 }
 
-function createSectionHeader(text: string): Paragraph {
+function createSectionHeader(text: string, theme: DocxTheme): Paragraph {
   return new Paragraph({
     children: [
       new TextRun({
         text,
         bold: true,
         size: 22,
-        font: "Calibri",
-        color: "333333",
+        font: theme.font,
+        color: theme.accent,
       }),
     ],
     heading: HeadingLevel.HEADING_2,
     spacing: { before: 240, after: 80 },
     border: {
       bottom: {
-        color: "CCCCCC",
+        color: theme.sectionBorder,
         space: 4,
         style: BorderStyle.SINGLE,
         size: 6,
