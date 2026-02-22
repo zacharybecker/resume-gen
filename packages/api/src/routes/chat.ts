@@ -1,20 +1,27 @@
 import { Router, type Request, type Response } from "express";
 import { adminDb } from "../config/firebase.js";
 import { authMiddleware, getUid } from "../middleware/auth.js";
+import { rateLimitByUser } from "../middleware/rate-limit.js";
 import { streamChatResponse } from "../services/ai.js";
+import { sanitizeAndValidateChatMessage } from "../services/input-guard.js";
 import { FieldValue } from "firebase-admin/firestore";
 
 export const chatRouter: Router = Router();
 
 chatRouter.use(authMiddleware);
 
-chatRouter.post("/:id/chat", async (req: Request, res: Response) => {
+// 20 messages per minute per user
+const chatRateLimit = rateLimitByUser({ maxRequests: 20, windowMs: 60_000 });
+
+chatRouter.post("/:id/chat", chatRateLimit, async (req: Request, res: Response) => {
   const uid = getUid(req);
   const resumeId = req.params.id as string;
   const { message } = req.body;
 
-  if (!message) {
-    res.status(400).json({ message: "Message is required" });
+  const { sanitized: sanitizedMessage, validation } =
+    sanitizeAndValidateChatMessage(message ?? "");
+  if (!validation.valid) {
+    res.status(400).json({ message: validation.error });
     return;
   }
 
@@ -48,7 +55,7 @@ chatRouter.post("/:id/chat", async (req: Request, res: Response) => {
     // Save user message
     await resumeRef.collection("messages").add({
       role: "user",
-      content: message,
+      content: sanitizedMessage,
       resumeSnapshot: null,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -67,7 +74,7 @@ chatRouter.post("/:id/chat", async (req: Request, res: Response) => {
       {
         resume,
         history,
-        userMessage: message,
+        userMessage: sanitizedMessage,
       },
       (event) => {
         res.write(`data: ${JSON.stringify(event)}\n\n`);
