@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { adminDb } from "../config/firebase.js";
 import { authMiddleware, getUid } from "../middleware/auth.js";
+import { rateLimitByUser } from "../middleware/rate-limit.js";
 import { streamChatResponse } from "../services/ai.js";
 import { sanitizeAndValidateChatMessage } from "../services/input-guard.js";
 import { FieldValue } from "firebase-admin/firestore";
@@ -9,7 +10,10 @@ export const chatRouter: Router = Router();
 
 chatRouter.use(authMiddleware);
 
-chatRouter.post("/:id/chat", async (req: Request, res: Response) => {
+// 20 messages per minute per user
+const chatRateLimit = rateLimitByUser({ maxRequests: 20, windowMs: 60_000 });
+
+chatRouter.post("/:id/chat", chatRateLimit, async (req: Request, res: Response) => {
   const uid = getUid(req);
   const resumeId = req.params.id as string;
   const { message } = req.body;
