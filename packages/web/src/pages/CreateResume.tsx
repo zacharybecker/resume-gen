@@ -16,6 +16,7 @@ export default function CreateResume() {
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {
+    if (generating) return;
     if (sources.length === 0) {
       setError("Please provide at least one input source");
       return;
@@ -112,7 +113,8 @@ export default function CreateResume() {
             </button>
             <button
               onClick={handleGenerate}
-              className="rounded-lg bg-coral px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-coral-dark"
+              disabled={generating}
+              className="rounded-lg bg-coral px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
             >
               Generate Resume (1 credit)
             </button>

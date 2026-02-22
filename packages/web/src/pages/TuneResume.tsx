@@ -15,6 +15,7 @@ export default function TuneResume() {
   const completedResumes = resumes.filter((r) => r.status === "complete");
 
   const handleTune = async () => {
+    if (generating) return;
     if (!selectedResume || !jobPosting.trim()) {
       setError("Please select a resume and paste a job posting");
       return;
@@ -126,7 +127,7 @@ export default function TuneResume() {
         <div className="flex justify-end">
           <button
             onClick={handleTune}
-            disabled={!selectedResume || !jobPosting.trim()}
+            disabled={generating || !selectedResume || !jobPosting.trim()}
             className="rounded-lg bg-coral px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
           >
             Tune Resume (1 credit)

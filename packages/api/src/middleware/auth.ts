@@ -35,7 +35,7 @@ export async function authMiddleware(
         email: decoded.email || "",
         displayName: decoded.name || "",
         photoURL: decoded.picture || "",
-        credits: FREE_CREDITS,
+        credits: Number(process.env.FREE_CREDITS) || FREE_CREDITS,
         stripeCustomerId: null,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),

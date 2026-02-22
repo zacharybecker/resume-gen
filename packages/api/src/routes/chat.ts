@@ -50,7 +50,6 @@ chatRouter.post("/:id/chat", async (req: Request, res: Response) => {
       role: "user",
       content: message,
       resumeSnapshot: null,
-      creditCharged: false,
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -83,33 +82,18 @@ chatRouter.post("/:id/chat", async (req: Request, res: Response) => {
     );
 
     // Save assistant message
-    const creditCharged = resumeUpdate !== null;
     await resumeRef.collection("messages").add({
       role: "assistant",
       content: fullResponse,
       resumeSnapshot: resumeUpdate,
-      creditCharged,
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    // If resume was updated, save changes and deduct credit
+    // If resume was updated, save changes
     if (resumeUpdate) {
       await resumeRef.update({
         resumeData: resumeUpdate,
         updatedAt: FieldValue.serverTimestamp(),
-      });
-
-      // Deduct credit for resume-modifying messages
-      const userRef = adminDb.collection("users").doc(uid);
-      await adminDb.runTransaction(async (tx) => {
-        const userDoc = await tx.get(userRef);
-        const credits = userDoc.data()?.credits ?? 0;
-        if (credits >= 1) {
-          tx.update(userRef, {
-            credits: FieldValue.increment(-1),
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        }
       });
     }
 

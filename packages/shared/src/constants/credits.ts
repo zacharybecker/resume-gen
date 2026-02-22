@@ -25,4 +25,4 @@ export const CREDIT_PACKS: CreditPack[] = [
   },
 ];
 
-export const FREE_CREDITS = 3;
+export const FREE_CREDITS = 2;
