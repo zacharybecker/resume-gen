@@ -8,6 +8,7 @@ import { generateRouter } from "./routes/generate.js";
 import { uploadRouter } from "./routes/upload.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { downloadRouter } from "./routes/download.js";
+import { extractThemeRouter } from "./routes/extract-theme.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,6 +27,7 @@ app.use("/resumes", generateRouter);
 app.use("/upload", uploadRouter);
 app.use("/resumes", downloadRouter);
 app.use(paymentsRouter);
+app.use("/extract-theme", extractThemeRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

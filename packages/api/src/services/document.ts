@@ -10,33 +10,10 @@ import {
   BorderStyle,
   ShadingType,
 } from "docx";
-import type { ResumeData, TemplateId } from "@resume-gen/shared";
-import { createPdfDocument } from "./pdf-templates.js";
-
-export async function generatePdfBuffer(
-  data: ResumeData,
-  templateId: TemplateId
-): Promise<Buffer> {
-  const doc = createPdfDocument(data, templateId);
-  const buffer = await renderToBuffer(doc as any);
-  return Buffer.from(buffer);
-}
-
-// Color palette matching the frontend Tailwind theme
-const colors = {
-  coral: "FF6B6B",
-  dark: "1A1A1A",
-  gray100: "F3F4F6",
-  gray200: "E5E7EB",
-  gray400: "9CA3AF",
-  gray500: "6B7280",
-  gray600: "4B5563",
-  gray700: "374151",
-  gray900: "111827",
-  green400: "4ADE80",
-  green600: "16A34A",
-  white: "FFFFFF",
-};
+import type { ResumeData } from "@resume-gen/shared";
+import type { ThemeConfig } from "@resume-gen/shared";
+import { getColorPalette, getFontSet } from "@resume-gen/shared";
+import { createPdfDocumentFromTheme } from "./pdf-templates.js";
 
 interface DocxTheme {
   font: string;
@@ -49,74 +26,86 @@ interface DocxTheme {
   sectionBorder: string;
 }
 
-const docxThemes: Record<TemplateId, DocxTheme> = {
-  modern: {
-    font: "Calibri",
-    headerBg: null,
-    headerText: colors.dark,
-    headerSubText: colors.gray500,
-    accent: colors.coral,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  classic: {
-    font: "Times New Roman",
-    headerBg: null,
-    headerText: colors.dark,
-    headerSubText: colors.gray500,
-    accent: colors.gray700,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  minimal: {
-    font: "Calibri",
-    headerBg: null,
-    headerText: colors.dark,
-    headerSubText: colors.gray500,
-    accent: colors.gray500,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  creative: {
-    font: "Calibri",
-    headerBg: colors.coral,
-    headerText: colors.white,
-    headerSubText: colors.white,
-    accent: colors.coral,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  executive: {
-    font: "Times New Roman",
-    headerBg: colors.dark,
-    headerText: colors.white,
-    headerSubText: colors.white,
-    accent: colors.dark,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  technical: {
-    font: "Courier New",
-    headerBg: colors.gray900,
-    headerText: colors.green400,
-    headerSubText: colors.green400,
-    accent: colors.green600,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-};
+/**
+ * Strip the leading "#" from a hex color string.
+ * The docx library expects hex colors without the "#" prefix.
+ * If the color uses rgba() format (not supported by docx), returns the fallback instead.
+ */
+function stripHash(color: string, fallback?: string): string {
+  if (color.startsWith("rgba")) {
+    return fallback ? stripHash(fallback) : "6B7280";
+  }
+  return color.startsWith("#") ? color.slice(1) : color;
+}
 
-export async function generateDocxBuffer(
+/**
+ * Resolve a ThemeConfig into a DocxTheme for use in DOCX generation.
+ * Applies layout-specific header rules matching the PDF renderer logic.
+ */
+function resolveDocxTheme(themeConfig: ThemeConfig): DocxTheme {
+  const palette = getColorPalette(themeConfig.colorScheme);
+  const fontSet = getFontSet(themeConfig.fontFamily);
+
+  let headerBg: string | null;
+  let headerText: string;
+  let headerSubText: string;
+
+  switch (themeConfig.layout) {
+    case "creative":
+      headerBg = stripHash(palette.accent);
+      headerText = "FFFFFF";
+      headerSubText = "FFFFFF";
+      break;
+    case "executive":
+      headerBg = stripHash(palette.primary);
+      headerText = "FFFFFF";
+      headerSubText = "FFFFFF";
+      break;
+    case "technical":
+      headerBg = "111827";
+      headerText = stripHash(palette.accent);
+      headerSubText = stripHash(palette.accent);
+      break;
+    case "modern":
+    case "classic":
+    case "minimal":
+    default:
+      headerBg = null;
+      headerText = stripHash(palette.headerText);
+      headerSubText = stripHash(palette.headerSubText, palette.headerText);
+      break;
+  }
+
+  return {
+    font: fontSet.docx,
+    headerBg,
+    headerText,
+    headerSubText,
+    accent: stripHash(palette.accent),
+    bodyText: stripHash(palette.bodyText),
+    subText: stripHash(palette.subText),
+    sectionBorder: stripHash(palette.sectionBorder),
+  };
+}
+
+// ── PDF generation ──────────────────────────────────────────────────
+
+export async function generatePdfBufferFromTheme(
   data: ResumeData,
-  templateId: TemplateId
+  themeConfig: ThemeConfig
 ): Promise<Buffer> {
-  const theme = docxThemes[templateId] || docxThemes.modern;
+  const doc = createPdfDocumentFromTheme(data, themeConfig);
+  const buffer = await renderToBuffer(doc as any);
+  return Buffer.from(buffer);
+}
+
+// ── DOCX generation ─────────────────────────────────────────────────
+
+export async function generateDocxBufferFromTheme(
+  data: ResumeData,
+  themeConfig: ThemeConfig
+): Promise<Buffer> {
+  const theme = resolveDocxTheme(themeConfig);
   const sections: Paragraph[] = [];
 
   // Name
@@ -142,13 +131,10 @@ export async function generateDocxBuffer(
   );
 
   // Contact info
-  const contactParts: string[] = [];
-  if (data.contactInfo.email) contactParts.push(data.contactInfo.email);
-  if (data.contactInfo.phone) contactParts.push(data.contactInfo.phone);
-  if (data.contactInfo.location) contactParts.push(data.contactInfo.location);
-  if (data.contactInfo.linkedin) contactParts.push(data.contactInfo.linkedin);
-  if (data.contactInfo.website) contactParts.push(data.contactInfo.website);
-  if (data.contactInfo.github) contactParts.push(data.contactInfo.github);
+  const contactParts = [
+    data.contactInfo.email, data.contactInfo.phone, data.contactInfo.location,
+    data.contactInfo.linkedin, data.contactInfo.website, data.contactInfo.github,
+  ].filter(Boolean) as string[];
 
   if (contactParts.length > 0) {
     sections.push(
@@ -199,7 +185,7 @@ export async function generateDocxBuffer(
               text: `  ${exp.startDate} - ${exp.current ? "Present" : exp.endDate || ""}`,
               size: 18,
               font: theme.font,
-              color: colors.gray400,
+              color: theme.subText,
             }),
           ],
           spacing: { before: 100 },
@@ -265,7 +251,7 @@ export async function generateDocxBuffer(
                     text: ` | ${edu.endDate}`,
                     size: 18,
                     font: theme.font,
-                    color: colors.gray400,
+                    color: theme.subText,
                   }),
                 ]
               : []),
@@ -275,7 +261,7 @@ export async function generateDocxBuffer(
                     text: ` | GPA: ${edu.gpa}`,
                     size: 18,
                     font: theme.font,
-                    color: colors.gray400,
+                    color: theme.subText,
                   }),
                 ]
               : []),
@@ -342,7 +328,7 @@ export async function generateDocxBuffer(
                 italics: true,
                 size: 18,
                 font: theme.font,
-                color: colors.gray500,
+                color: theme.subText,
               }),
             ],
           })
@@ -370,7 +356,7 @@ export async function generateDocxBuffer(
                     text: ` (${cert.date})`,
                     size: 18,
                     font: theme.font,
-                    color: colors.gray400,
+                    color: theme.subText,
                   }),
                 ]
               : []),

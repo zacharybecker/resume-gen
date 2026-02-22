@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useResumes } from "../hooks/useResumes";
-import { apiDelete } from "../lib/api";
+import { apiDelete, downloadResume } from "../lib/api";
 import type { Resume } from "@resume-gen/shared";
 
 function ResumeCard({ resume }: { resume: Resume }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,6 +33,19 @@ function ResumeCard({ resume }: { resume: Resume }) {
     }
   }
 
+  const handleDownload = useCallback(async (e: React.MouseEvent, format: "pdf" | "docx") => {
+    e.preventDefault();
+    if (!resume.id) return;
+    setDownloading(format);
+    try {
+      await downloadResume(resume.id, format, resume.title || "resume");
+    } catch (err) {
+      console.error("Download error:", err);
+    } finally {
+      setDownloading(null);
+    }
+  }, [resume.id, resume.title]);
+
   const statusColors = {
     draft: "bg-gray-100 text-gray-600",
     generating: "bg-yellow-100 text-yellow-700",
@@ -40,47 +54,20 @@ function ResumeCard({ resume }: { resume: Resume }) {
 
   return (
     <div className="group relative rounded-lg border border-gray-200 transition-all hover:border-coral hover:shadow-md">
-      {/* 3-dot menu */}
-      <div ref={menuRef} className="absolute right-2 top-2 z-10">
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            setMenuOpen(!menuOpen);
-          }}
-          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-        >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-          </svg>
-        </button>
-        {menuOpen && (
-          <div className="absolute right-0 mt-1 w-36 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
-          </div>
-        )}
-      </div>
-
       <Link to={`/editor/${resume.id}`} className="block p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="font-semibold text-dark group-hover:text-coral">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate font-semibold text-dark group-hover:text-coral">
               {resume.title}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {resume.templateId} template
+              {resume.themeConfig
+                ? `${resume.themeConfig.layout} layout · ${resume.themeConfig.colorScheme} scheme`
+                : `${resume.templateId} template`}
             </p>
           </div>
           <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[resume.status]}`}
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[resume.status]}`}
           >
             {resume.status}
           </span>
@@ -93,6 +80,63 @@ function ResumeCard({ resume }: { resume: Resume }) {
           </span>
         </div>
       </Link>
+
+      {/* Action bar */}
+      <div className="flex items-center justify-between border-t border-gray-100 px-5 py-2.5">
+        {resume.status === "complete" && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => handleDownload(e, "pdf")}
+              disabled={downloading !== null}
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-coral/10 hover:text-coral disabled:opacity-50"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {downloading === "pdf" ? "..." : "PDF"}
+            </button>
+            <button
+              onClick={(e) => handleDownload(e, "docx")}
+              disabled={downloading !== null}
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-coral/10 hover:text-coral disabled:opacity-50"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {downloading === "docx" ? "..." : "DOCX"}
+            </button>
+          </div>
+        )}
+
+        {/* Menu button */}
+        <div ref={menuRef} className="relative">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              setMenuOpen(!menuOpen);
+            }}
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </button>
+          {menuOpen && (
+            <div className="absolute bottom-full right-0 mb-1 w-36 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

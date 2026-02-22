@@ -6,24 +6,8 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-import type { ResumeData, TemplateId } from "@resume-gen/shared";
-
-// Color palette matching the frontend Tailwind theme
-const colors = {
-  coral: "#FF6B6B",
-  dark: "#1A1A1A",
-  gray50: "#F9FAFB",
-  gray100: "#F3F4F6",
-  gray200: "#E5E7EB",
-  gray400: "#9CA3AF",
-  gray500: "#6B7280",
-  gray600: "#4B5563",
-  gray700: "#374151",
-  gray900: "#111827",
-  green400: "#4ADE80",
-  green600: "#16A34A",
-  white: "#FFFFFF",
-};
+import type { ResumeData, ThemeConfig } from "@resume-gen/shared";
+import { getColorPalette, getFontSet } from "@resume-gen/shared";
 
 interface TemplateTheme {
   fontFamily: string;
@@ -37,74 +21,59 @@ interface TemplateTheme {
   sectionBorder: string;
 }
 
-const themes: Record<TemplateId, TemplateTheme> = {
-  modern: {
-    fontFamily: "Helvetica",
-    fontFamilyBold: "Helvetica-Bold",
-    headerBg: colors.white,
-    headerText: colors.dark,
-    headerSubText: colors.gray500,
-    accent: colors.coral,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  classic: {
-    fontFamily: "Times-Roman",
-    fontFamilyBold: "Times-Bold",
-    headerBg: colors.white,
-    headerText: colors.dark,
-    headerSubText: colors.gray500,
-    accent: colors.gray700,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  minimal: {
-    fontFamily: "Helvetica",
-    fontFamilyBold: "Helvetica-Bold",
-    headerBg: colors.white,
-    headerText: colors.dark,
-    headerSubText: colors.gray500,
-    accent: colors.gray500,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  creative: {
-    fontFamily: "Helvetica",
-    fontFamilyBold: "Helvetica-Bold",
-    headerBg: colors.coral,
-    headerText: colors.white,
-    headerSubText: "rgba(255,255,255,0.8)",
-    accent: colors.coral,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  executive: {
-    fontFamily: "Times-Roman",
-    fontFamilyBold: "Times-Bold",
-    headerBg: colors.dark,
-    headerText: colors.white,
-    headerSubText: "rgba(255,255,255,0.8)",
-    accent: colors.dark,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-  technical: {
-    fontFamily: "Courier",
-    fontFamilyBold: "Courier-Bold",
-    headerBg: colors.gray900,
-    headerText: colors.green400,
-    headerSubText: "rgba(74,222,128,0.8)",
-    accent: colors.green600,
-    bodyText: colors.dark,
-    subText: colors.gray600,
-    sectionBorder: colors.gray200,
-  },
-};
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+export function resolveTheme(themeConfig: ThemeConfig): TemplateTheme {
+  const palette = getColorPalette(themeConfig.colorScheme);
+  const fontSet = getFontSet(themeConfig.fontFamily);
+
+  let headerBg: string;
+  let headerText: string;
+  let headerSubText: string;
+
+  switch (themeConfig.layout) {
+    case "creative":
+      headerBg = palette.accent;
+      headerText = "#FFFFFF";
+      headerSubText = "rgba(255,255,255,0.8)";
+      break;
+    case "executive":
+      headerBg = palette.primary;
+      headerText = "#FFFFFF";
+      headerSubText = "rgba(255,255,255,0.8)";
+      break;
+    case "technical":
+      headerBg = "#111827";
+      headerText = palette.accent;
+      headerSubText = hexToRgba(palette.accent, 0.8);
+      break;
+    case "modern":
+    case "classic":
+    case "minimal":
+    default:
+      headerBg = palette.headerBg;
+      headerText = palette.headerText;
+      headerSubText = palette.headerSubText;
+      break;
+  }
+
+  return {
+    headerBg,
+    headerText,
+    headerSubText,
+    accent: palette.accent,
+    bodyText: palette.bodyText,
+    subText: palette.subText,
+    sectionBorder: palette.sectionBorder,
+    fontFamily: fontSet.pdf,
+    fontFamilyBold: fontSet.pdfBold,
+  };
+}
 
 function buildStyles(theme: TemplateTheme) {
   return StyleSheet.create({
@@ -121,8 +90,8 @@ function buildStyles(theme: TemplateTheme) {
       paddingHorizontal: 40,
       paddingVertical: 24,
       marginBottom: 0,
-      ...(theme.headerBg === colors.white
-        ? { borderBottomWidth: 1, borderBottomColor: colors.gray200 }
+      ...(theme.headerBg === "#FFFFFF"
+        ? { borderBottomWidth: 1, borderBottomColor: "#E5E7EB" }
         : {}),
     },
     name: {
@@ -175,7 +144,7 @@ function buildStyles(theme: TemplateTheme) {
     },
     expDate: {
       fontSize: 9,
-      color: colors.gray400,
+      color: theme.subText,
     },
     expCompany: {
       fontSize: 10,
@@ -205,7 +174,7 @@ function buildStyles(theme: TemplateTheme) {
       gap: 4,
     },
     skillTag: {
-      backgroundColor: colors.gray100,
+      backgroundColor: "#F3F4F6",
       padding: "2 6",
       borderRadius: 3,
       fontSize: 9,
@@ -225,7 +194,7 @@ function buildStyles(theme: TemplateTheme) {
     },
     techRow: {
       fontSize: 8,
-      color: colors.gray500,
+      color: theme.subText,
       fontStyle: "italic" as const,
       marginTop: 2,
     },
@@ -235,18 +204,15 @@ function buildStyles(theme: TemplateTheme) {
     },
     certDate: {
       fontSize: 9,
-      color: colors.gray400,
+      color: theme.subText,
     },
   });
 }
 
-export function createPdfDocument(
+function renderDocument(
   data: ResumeData,
-  templateId: TemplateId
+  styles: ReturnType<typeof buildStyles>
 ): React.ReactElement {
-  const theme = themes[templateId] || themes.modern;
-  const styles = buildStyles(theme);
-
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
@@ -375,3 +341,13 @@ export function createPdfDocument(
     </Document>
   );
 }
+
+export function createPdfDocumentFromTheme(
+  data: ResumeData,
+  themeConfig: ThemeConfig
+): React.ReactElement {
+  const theme = resolveTheme(themeConfig);
+  const styles = buildStyles(theme);
+  return renderDocument(data, styles);
+}
+

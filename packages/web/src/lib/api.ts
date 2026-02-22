@@ -12,14 +12,23 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+export async function downloadResume(
+  resumeId: string,
+  format: "pdf" | "docx",
+  filename: string
+): Promise<void> {
   const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}${path}`, { headers });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(error.message || res.statusText);
-  }
-  return res.json();
+  const res = await fetch(`${API_BASE}/resumes/${resumeId}/download/${format}`, { headers });
+  if (!res.ok) throw new Error("Download failed");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {

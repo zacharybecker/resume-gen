@@ -4,7 +4,6 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
     "clean": "turbo clean"
   },
   "devDependencies": {
@@ -13,7 +12,6 @@
   },
   "packageManager": "pnpm@10.22.0",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "protobufjs", "@firebase/util"],
-    "ignoredBuiltDependencies": []
+    "onlyBuiltDependencies": ["esbuild", "protobufjs", "@firebase/util"]
   }
 }

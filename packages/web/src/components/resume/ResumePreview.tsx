@@ -1,30 +1,74 @@
-import type { ResumeData, TemplateId } from "@resume-gen/shared";
+import type { ResumeData, TemplateId, ThemeConfig } from "@resume-gen/shared";
+import { getColorPalette, getFontSet, deriveThemeConfig } from "@resume-gen/shared";
+import { useMemo } from "react";
 
 interface ResumePreviewProps {
   data: ResumeData;
-  templateId: TemplateId;
+  templateId?: TemplateId;
+  themeConfig?: ThemeConfig;
 }
 
-const templateStyles: Record<TemplateId, { headerBg: string; headerText: string; accent: string; fontClass: string }> = {
-  modern: { headerBg: "bg-white", headerText: "text-dark", accent: "text-coral", fontClass: "font-sans" },
-  classic: { headerBg: "bg-white", headerText: "text-dark", accent: "text-gray-700", fontClass: "font-serif" },
-  minimal: { headerBg: "bg-white", headerText: "text-dark", accent: "text-gray-500", fontClass: "font-sans" },
-  creative: { headerBg: "bg-coral", headerText: "text-white", accent: "text-coral", fontClass: "font-sans" },
-  executive: { headerBg: "bg-dark", headerText: "text-white", accent: "text-dark", fontClass: "font-serif" },
-  technical: { headerBg: "bg-gray-900", headerText: "text-green-400", accent: "text-green-600", fontClass: "font-mono" },
-};
+function resolveHeaderStyles(
+  layout: ThemeConfig["layout"],
+  palette: ReturnType<typeof getColorPalette>
+): { backgroundColor: string; color: string; subTextColor: string; hasBorder: boolean } {
+  switch (layout) {
+    case "creative":
+      return {
+        backgroundColor: palette.accent,
+        color: "#FFFFFF",
+        subTextColor: "rgba(255,255,255,0.8)",
+        hasBorder: false,
+      };
+    case "executive":
+      return {
+        backgroundColor: palette.primary,
+        color: "#FFFFFF",
+        subTextColor: "rgba(255,255,255,0.8)",
+        hasBorder: false,
+      };
+    case "technical":
+      return {
+        backgroundColor: "#111827",
+        color: palette.accent,
+        subTextColor: palette.accent,
+        hasBorder: false,
+      };
+    // modern, classic, minimal
+    default:
+      return {
+        backgroundColor: "#FFFFFF",
+        color: palette.headerText,
+        subTextColor: palette.headerSubText,
+        hasBorder: true,
+      };
+  }
+}
 
-export default function ResumePreview({ data, templateId }: ResumePreviewProps) {
-  const style = templateStyles[templateId];
+export default function ResumePreview({ data, templateId, themeConfig }: ResumePreviewProps) {
+  const activeTheme = useMemo<ThemeConfig>(() => {
+    if (themeConfig) return themeConfig;
+    return deriveThemeConfig(templateId ?? "modern");
+  }, [themeConfig, templateId]);
+
+  const palette = useMemo(() => getColorPalette(activeTheme.colorScheme), [activeTheme.colorScheme]);
+  const fontSet = useMemo(() => getFontSet(activeTheme.fontFamily), [activeTheme.fontFamily]);
+  const header = useMemo(() => resolveHeaderStyles(activeTheme.layout, palette), [activeTheme.layout, palette]);
 
   return (
-    <div className={`mx-auto max-w-[8.5in] bg-white shadow-lg ${style.fontClass}`}>
+    <div className={`mx-auto max-w-[8.5in] bg-white shadow-lg ${fontSet.tailwind}`}>
       {/* Header */}
-      <div className={`${style.headerBg} px-8 py-6 ${templateId === "creative" || templateId === "executive" || templateId === "technical" ? "" : "border-b border-gray-200"}`}>
-        <h1 className={`text-2xl font-bold ${style.headerText}`}>
+      <div
+        className={`px-8 py-6 ${header.hasBorder ? "border-b border-gray-200" : ""}`}
+        style={{ backgroundColor: header.backgroundColor }}
+      >
+        <h1 className="text-2xl font-bold" style={{ color: header.color }}>
           {data.contactInfo.fullName}
         </h1>
-        <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm ${templateId === "creative" || templateId === "executive" ? "text-white/80" : templateId === "technical" ? "text-green-400/80" : "text-gray-500"}`}>
+        <div
+          className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm"
+          style={{ color: header.subTextColor }}
+        >
           {data.contactInfo.email && <span>{data.contactInfo.email}</span>}
           {data.contactInfo.phone && <span>{data.contactInfo.phone}</span>}
           {data.contactInfo.location && <span>{data.contactInfo.location}</span>}
@@ -38,7 +82,10 @@ export default function ResumePreview({ data, templateId }: ResumePreviewProps) 
         {/* Summary */}
         {data.summary && (
           <section>
-            <h2 className={`mb-2 text-sm font-bold uppercase tracking-wider ${style.accent}`}>
+            <h2
+              className="mb-2 text-sm font-bold uppercase tracking-wider"
+              style={{ color: palette.accent }}
+            >
               Professional Summary
             </h2>
             <p className="text-sm text-gray-700 leading-relaxed">{data.summary}</p>
@@ -48,7 +95,10 @@ export default function ResumePreview({ data, templateId }: ResumePreviewProps) 
         {/* Experience */}
         {data.experience.length > 0 && (
           <section>
-            <h2 className={`mb-3 text-sm font-bold uppercase tracking-wider ${style.accent}`}>
+            <h2
+              className="mb-3 text-sm font-bold uppercase tracking-wider"
+              style={{ color: palette.accent }}
+            >
               Experience
             </h2>
             <div className="space-y-4">
@@ -82,7 +132,10 @@ export default function ResumePreview({ data, templateId }: ResumePreviewProps) 
         {/* Education */}
         {data.education.length > 0 && (
           <section>
-            <h2 className={`mb-3 text-sm font-bold uppercase tracking-wider ${style.accent}`}>
+            <h2
+              className="mb-3 text-sm font-bold uppercase tracking-wider"
+              style={{ color: palette.accent }}
+            >
               Education
             </h2>
             <div className="space-y-3">
@@ -107,7 +160,10 @@ export default function ResumePreview({ data, templateId }: ResumePreviewProps) 
         {/* Skills */}
         {data.skills.length > 0 && (
           <section>
-            <h2 className={`mb-2 text-sm font-bold uppercase tracking-wider ${style.accent}`}>
+            <h2
+              className="mb-2 text-sm font-bold uppercase tracking-wider"
+              style={{ color: palette.accent }}
+            >
               Skills
             </h2>
             <div className="flex flex-wrap gap-1.5">
@@ -126,7 +182,10 @@ export default function ResumePreview({ data, templateId }: ResumePreviewProps) 
         {/* Projects */}
         {data.projects.length > 0 && (
           <section>
-            <h2 className={`mb-3 text-sm font-bold uppercase tracking-wider ${style.accent}`}>
+            <h2
+              className="mb-3 text-sm font-bold uppercase tracking-wider"
+              style={{ color: palette.accent }}
+            >
               Projects
             </h2>
             <div className="space-y-3">
@@ -152,7 +211,10 @@ export default function ResumePreview({ data, templateId }: ResumePreviewProps) 
         {/* Certifications */}
         {data.certifications.length > 0 && (
           <section>
-            <h2 className={`mb-2 text-sm font-bold uppercase tracking-wider ${style.accent}`}>
+            <h2
+              className="mb-2 text-sm font-bold uppercase tracking-wider"
+              style={{ color: palette.accent }}
+            >
               Certifications
             </h2>
             <div className="space-y-1">
