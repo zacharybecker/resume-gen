@@ -10,25 +10,31 @@ export default function FileUpload({ onFileProcessed }: FileUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const ACCEPTED_TYPES = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+  ];
+
   const handleFiles = async (files: FileList) => {
-    const pdfFiles = Array.from(files).filter(
-      (f) => f.type === "application/pdf"
+    const supported = Array.from(files).filter(
+      (f) => ACCEPTED_TYPES.includes(f.type)
     );
 
-    if (pdfFiles.length === 0) {
-      setError("Only PDF files are supported");
+    if (supported.length === 0) {
+      setError("Only PDF, Word (.docx), and text files are supported");
       return;
     }
 
-    if (pdfFiles.length < files.length) {
-      setError("Some non-PDF files were skipped");
+    if (supported.length < files.length) {
+      setError("Some unsupported files were skipped");
     } else {
       setError(null);
     }
 
     setUploading(true);
 
-    for (const file of pdfFiles) {
+    for (const file of supported) {
       try {
         const result = await apiUpload<{ filename: string; content: string }>(
           "/upload",
@@ -62,7 +68,7 @@ export default function FileUpload({ onFileProcessed }: FileUploadProps) {
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf"
+        accept=".pdf,.docx,.txt"
         multiple
         className="hidden"
         onChange={(e) => {
@@ -92,7 +98,7 @@ export default function FileUpload({ onFileProcessed }: FileUploadProps) {
             />
           </svg>
           <p className="text-sm text-gray-600">
-            Drag and drop PDFs, or{" "}
+            Drag and drop files, or{" "}
             <button
               onClick={() => inputRef.current?.click()}
               className="font-medium text-coral hover:underline"
@@ -101,7 +107,7 @@ export default function FileUpload({ onFileProcessed }: FileUploadProps) {
             </button>
           </p>
           <p className="text-xs text-gray-400">
-            Resume or LinkedIn PDF export (multiple files supported)
+            PDF, Word (.docx), or text files (multiple files supported)
           </p>
         </div>
       )}
