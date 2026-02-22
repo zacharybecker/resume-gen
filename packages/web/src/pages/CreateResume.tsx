@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import InputSourceSelector from "../components/input/InputSourceSelector";
-import TemplateGallery from "../components/resume/TemplateGallery";
-import type { InputSource, TemplateId } from "@resume-gen/shared";
+import StylePicker from "../components/resume/StylePicker";
+import type { InputSource, ThemeConfig } from "@resume-gen/shared";
+import { DEFAULT_THEME } from "@resume-gen/shared";
 import { apiPost } from "../lib/api";
 
 type Step = "input" | "template" | "generating";
@@ -11,7 +12,7 @@ export default function CreateResume() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("input");
   const [sources, setSources] = useState<InputSource[]>([]);
-  const [templateId, setTemplateId] = useState<TemplateId>("modern");
+  const [themeConfig, setThemeConfig] = useState<ThemeConfig>(DEFAULT_THEME);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -30,7 +31,8 @@ export default function CreateResume() {
       // Create the resume
       const resume = await apiPost<{ id: string }>("/resumes", {
         title: "New Resume",
-        templateId,
+        templateId: themeConfig.layout,
+        themeConfig,
         mode: "create",
         inputSources: sources,
       });
@@ -54,7 +56,7 @@ export default function CreateResume() {
           {step === "input"
             ? "Step 1: Provide your professional information"
             : step === "template"
-              ? "Step 2: Choose a template"
+              ? "Step 2: Choose your style"
               : "Generating your resume..."}
         </p>
 
@@ -95,7 +97,7 @@ export default function CreateResume() {
               }}
               className="rounded-lg bg-coral px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-coral-dark"
             >
-              Next: Choose Template
+              Next: Choose Style
             </button>
           </div>
         </div>
@@ -103,7 +105,7 @@ export default function CreateResume() {
 
       {step === "template" && (
         <div className="space-y-6">
-          <TemplateGallery selected={templateId} onSelect={setTemplateId} />
+          <StylePicker value={themeConfig} onChange={setThemeConfig} />
           <div className="flex justify-between">
             <button
               onClick={() => setStep("input")}

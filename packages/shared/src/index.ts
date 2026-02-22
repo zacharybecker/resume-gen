@@ -27,3 +27,24 @@ export type {
 export { TEMPLATES } from "./constants/templates.js";
 export type { TemplateDefinition } from "./constants/templates.js";
 export { CREDIT_PACKS, FREE_CREDITS } from "./constants/credits.js";
+export type {
+  LayoutId,
+  ColorSchemeId,
+  FontFamilyId,
+  ThemeConfig,
+  ColorPalette,
+  FontSet,
+  LayoutDefinition,
+  ColorSchemeDefinition,
+  FontFamilyDefinition,
+} from "./types/theme.js";
+export {
+  LAYOUTS,
+  COLOR_SCHEMES,
+  FONT_FAMILIES,
+  FONT_SETS,
+  getColorPalette,
+  getFontSet,
+  deriveThemeConfig,
+  DEFAULT_THEME,
+} from "./constants/themes.js";

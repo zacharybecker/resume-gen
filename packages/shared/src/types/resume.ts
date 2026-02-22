@@ -1,3 +1,5 @@
+import type { ThemeConfig } from "./theme.js";
+
 export interface ContactInfo {
   fullName: string;
   email: string;
@@ -68,6 +70,7 @@ export interface Resume {
   userId: string;
   title: string;
   templateId: TemplateId;
+  themeConfig?: ThemeConfig;
   mode: ResumeMode;
   jobPosting: string | null;
   inputSources: InputSource[];

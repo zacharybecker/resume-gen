@@ -32,11 +32,12 @@ export default function TuneResume() {
       const newResume = await apiPost<{ id: string }>("/resumes", {
         title: `${sourceResume.title} (Tuned)`,
         templateId: sourceResume.templateId,
+        themeConfig: (sourceResume as any).themeConfig || undefined,
         mode: "tune",
         jobPosting: jobPosting.trim(),
         inputSources: [
           {
-            type: "text",
+            type: "text" as const,
             content: JSON.stringify(sourceResume.resumeData),
           },
         ],
@@ -102,7 +103,9 @@ export default function TuneResume() {
                 >
                   <p className="font-medium text-dark">{resume.title}</p>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    {resume.templateId} template
+                    {(resume as any).themeConfig
+                      ? `${(resume as any).themeConfig.layout} layout`
+                      : `${resume.templateId} template`}
                   </p>
                 </button>
               ))}

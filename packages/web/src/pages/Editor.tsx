@@ -5,13 +5,15 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../hooks/useAuth";
 import ResumePreview from "../components/resume/ResumePreview";
 import ChatPanel from "../components/chat/ChatPanel";
-import type { ResumeData, TemplateId } from "@resume-gen/shared";
+import type { ResumeData, TemplateId, ThemeConfig } from "@resume-gen/shared";
+import { DEFAULT_THEME, deriveThemeConfig } from "@resume-gen/shared";
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [templateId, setTemplateId] = useState<TemplateId>("modern");
+  const [themeConfig, setThemeConfig] = useState<ThemeConfig>(DEFAULT_THEME);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -51,6 +53,11 @@ export default function Editor() {
           const data = doc.data();
           setResumeData(data.resumeData as ResumeData | null);
           setTemplateId(data.templateId as TemplateId);
+          if (data.themeConfig) {
+            setThemeConfig(data.themeConfig as ThemeConfig);
+          } else {
+            setThemeConfig(deriveThemeConfig(data.templateId as TemplateId));
+          }
           setTitle(data.title);
         }
         setLoading(false);
@@ -113,7 +120,7 @@ export default function Editor() {
         {/* Preview */}
         <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
           {resumeData ? (
-            <ResumePreview data={resumeData} templateId={templateId} />
+            <ResumePreview data={resumeData} themeConfig={themeConfig} />
           ) : (
             <div className="flex h-full items-center justify-center">
               <p className="text-gray-400">No resume data yet</p>

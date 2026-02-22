@@ -1,8 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import { adminDb } from "../config/firebase.js";
 import { authMiddleware, getUid } from "../middleware/auth.js";
-import { generatePdfBuffer, generateDocxBuffer } from "../services/document.js";
-import type { ResumeData, TemplateId } from "@resume-gen/shared";
+import { generatePdfBuffer, generateDocxBuffer, generatePdfBufferFromTheme, generateDocxBufferFromTheme } from "../services/document.js";
+import type { ResumeData, TemplateId, ThemeConfig } from "@resume-gen/shared";
+import { deriveThemeConfig } from "@resume-gen/shared";
 
 export const downloadRouter: Router = Router();
 
@@ -40,16 +41,17 @@ downloadRouter.get("/:id/download/:format", async (req: Request, res: Response) 
     }
 
     const templateId = (resume.templateId || "modern") as TemplateId;
+    const themeConfig: ThemeConfig = resume.themeConfig || deriveThemeConfig(templateId);
     const title = resume.title || "resume";
     const safeName = title.replace(/[^a-zA-Z0-9-_ ]/g, "").replace(/\s+/g, "-");
 
     if (format === "pdf") {
-      const buffer = await generatePdfBuffer(resumeData, templateId);
+      const buffer = await generatePdfBufferFromTheme(resumeData, themeConfig);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
       res.send(buffer);
     } else {
-      const buffer = await generateDocxBuffer(resumeData, templateId);
+      const buffer = await generateDocxBufferFromTheme(resumeData, themeConfig);
       res.setHeader(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

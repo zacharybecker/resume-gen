@@ -49,7 +49,7 @@ resumesRouter.get("/:id", async (req: Request, res: Response) => {
 // Create resume
 resumesRouter.post("/", async (req: Request, res: Response) => {
   const uid = getUid(req);
-  const { title, templateId, mode, jobPosting, inputSources } = req.body;
+  const { title, templateId, themeConfig, mode, jobPosting, inputSources } = req.body;
 
   try {
     const docRef = await adminDb
@@ -60,6 +60,7 @@ resumesRouter.post("/", async (req: Request, res: Response) => {
         userId: uid,
         title: title || "Untitled Resume",
         templateId: templateId || "modern",
+        themeConfig: themeConfig || null,
         mode: mode || "create",
         jobPosting: jobPosting || null,
         inputSources: inputSources || [],
