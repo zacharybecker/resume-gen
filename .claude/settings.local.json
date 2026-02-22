@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(cd /c/Users/zachb/workspaces/resume-gen && pnpm install 2>&1)",
+      "Bash(cd /c/Users/zachb/workspaces/resume-gen && pnpm approve-builds esbuild protobufjs @firebase/util 2>&1 && pnpm install 2>&1)",
+      "Bash(cd /c/Users/zachb/workspaces/resume-gen && pnpm --filter @resume-gen/shared build 2>&1)",
+      "Bash(cd /c/Users/zachb/workspaces/resume-gen && pnpm --filter @resume-gen/web build 2>&1)",
+      "Bash(cd /c/Users/zachb/workspaces/resume-gen && pnpm --filter @resume-gen/api build 2>&1)",
+      "Bash(cd /c/Users/zachb/workspaces/resume-gen && pnpm build 2>&1)",
+      "Bash(cd:*)",
+      "Bash(tail:*)",
+      "WebSearch",
+      "WebFetch(domain:resumeai.com)",
+      "WebFetch(domain:resumai.com)",
+      "WebFetch(domain:craftmyresume.com)",
+      "WebFetch(domain:resumecraft.ai)",
+      "WebFetch(domain:resumerocket.ai)",
+      "WebFetch(domain:polishresume.com)",
+      "WebFetch(domain:resumeforge.ai)",
+      "Bash(find:*)",
+      "Bash(head:*)"
+    ]
+  }
+}

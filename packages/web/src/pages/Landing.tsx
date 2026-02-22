@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { FREE_CREDITS } from "@resume-gen/shared";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Landing() {
@@ -44,7 +45,7 @@ export default function Landing() {
           </Link>
         </div>
         <p className="mt-4 text-sm text-gray-400">
-          3 free credits to get started. No credit card required.
+          {FREE_CREDITS} free credits to get started. No credit card required.
         </p>
       </div>
     </div>

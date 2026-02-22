@@ -43,7 +43,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
         </button>
       </div>
       <p className="mt-1.5 text-xs text-gray-400">
-        Messages that change your resume cost 1 credit. Questions are free.
+        Messages that change your resume do not cost credits.
       </p>
     </div>
   );
