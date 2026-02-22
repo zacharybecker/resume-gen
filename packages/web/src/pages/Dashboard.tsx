@@ -1,8 +1,37 @@
 import { Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
 import { useResumes } from "../hooks/useResumes";
+import { apiDelete } from "../lib/api";
 import type { Resume } from "@resume-gen/shared";
 
 function ResumeCard({ resume }: { resume: Resume }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [menuOpen]);
+
+  async function handleDelete() {
+    if (!confirm("Delete this resume? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await apiDelete(`/resumes/${resume.id}`);
+    } catch {
+      alert("Failed to delete resume.");
+      setDeleting(false);
+    }
+  }
+
   const statusColors = {
     draft: "bg-gray-100 text-gray-600",
     generating: "bg-yellow-100 text-yellow-700",
@@ -10,33 +39,61 @@ function ResumeCard({ resume }: { resume: Resume }) {
   };
 
   return (
-    <Link
-      to={`/editor/${resume.id}`}
-      className="group block rounded-lg border border-gray-200 p-5 transition-all hover:border-coral hover:shadow-md"
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-semibold text-dark group-hover:text-coral">
-            {resume.title}
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {resume.templateId} template
-          </p>
-        </div>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[resume.status]}`}
+    <div className="group relative rounded-lg border border-gray-200 transition-all hover:border-coral hover:shadow-md">
+      {/* 3-dot menu */}
+      <div ref={menuRef} className="absolute right-2 top-2 z-10">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            setMenuOpen(!menuOpen);
+          }}
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
         >
-          {resume.status}
-        </span>
+          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+          </svg>
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 mt-1 w-36 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        )}
       </div>
-      <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-        <span>{resume.mode === "tune" ? "Fine-tuned" : "Created"}</span>
-        <span>&middot;</span>
-        <span>
-          {new Date(resume.updatedAt).toLocaleDateString()}
-        </span>
-      </div>
-    </Link>
+
+      <Link to={`/editor/${resume.id}`} className="block p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-semibold text-dark group-hover:text-coral">
+              {resume.title}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {resume.templateId} template
+            </p>
+          </div>
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[resume.status]}`}
+          >
+            {resume.status}
+          </span>
+        </div>
+        <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+          <span>{resume.mode === "tune" ? "Fine-tuned" : "Created"}</span>
+          <span>&middot;</span>
+          <span>
+            {new Date(resume.updatedAt).toLocaleDateString()}
+          </span>
+        </div>
+      </Link>
+    </div>
   );
 }
 
