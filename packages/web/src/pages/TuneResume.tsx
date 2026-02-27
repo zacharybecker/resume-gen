@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useResumes } from "../hooks/useResumes";
+import { useResumeImport } from "../hooks/useResumeImport";
 import { apiPost } from "../lib/api";
 import type { Resume } from "@resume-gen/shared";
 
@@ -11,6 +12,18 @@ export default function TuneResume() {
   const [jobPosting, setJobPosting] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { importResume, importing, error: importError } = useResumeImport();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const result = await importResume(file);
+    if (result) {
+      setSelectedResume(result.id);
+    }
+  };
 
   const completedResumes = resumes.filter((r) => r.status === "complete");
 
@@ -69,9 +82,9 @@ export default function TuneResume() {
         Select an existing resume and paste a job posting to create a tailored version
       </p>
 
-      {error && (
+      {(error || importError) && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+          {error || importError}
         </div>
       )}
 
@@ -111,6 +124,32 @@ export default function TuneResume() {
               ))}
             </div>
           )}
+          <div className="mt-3 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200" />
+            <span className="text-xs text-gray-400">or</span>
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-300 p-3 text-sm text-gray-600 transition-colors hover:border-coral hover:text-coral disabled:opacity-50"
+          >
+            {importing ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-coral border-t-transparent" />
+                Importing resume...
+              </span>
+            ) : (
+              "Upload a resume (PDF, Word, or text)"
+            )}
+          </button>
         </div>
 
         {/* Job posting */}

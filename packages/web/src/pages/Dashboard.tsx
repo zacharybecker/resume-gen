@@ -1,6 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useResumes } from "../hooks/useResumes";
+import { useResumeImport } from "../hooks/useResumeImport";
 import { apiDelete, downloadResume } from "../lib/api";
 import type { Resume } from "@resume-gen/shared";
 
@@ -142,13 +143,38 @@ function ResumeCard({ resume }: { resume: Resume }) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { resumes, loading } = useResumes();
+  const { importResume, importing, error: importError } = useResumeImport();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const result = await importResume(file);
+    if (result) navigate(`/editor/${result.id}`);
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-dark">My Resumes</h1>
         <div className="flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+          >
+            {importing ? "Importing..." : "Upload Resume"}
+          </button>
           <Link
             to="/tune"
             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
@@ -164,7 +190,19 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {loading ? (
+      {importError && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {importError}
+        </div>
+      )}
+
+      {importing ? (
+        <div className="mt-12 flex flex-col items-center justify-center py-16">
+          <div className="h-12 w-12 animate-spin rounded-full border-3 border-coral border-t-transparent" />
+          <p className="mt-4 text-lg font-medium text-dark">Importing your resume...</p>
+          <p className="mt-1 text-sm text-gray-500">Parsing and generating — this may take a moment</p>
+        </div>
+      ) : loading ? (
         <div className="mt-12 flex justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-coral border-t-transparent" />
         </div>
